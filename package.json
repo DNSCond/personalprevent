@@ -1,0 +1,19 @@
+{
+  "private": true,
+  "name": "personalprevent",
+  "version": "0.0.0",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "dependencies": {
+    "@devvit/public-api": "0.11.19",
+    "devvit": "0.11.19"
+  },
+  "scripts": {
+    "deploy": "export DEVVIT_SUBREDDIT=axolotl_playground && devvit upload",
+    "dev": "devvit playtest",
+    "login": "devvit login --copy-paste"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3"
+  }
+}
