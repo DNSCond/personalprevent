@@ -69,8 +69,8 @@ function validateStringText(body: string): boolean {
     }, text = body.replace(/!\[(?:img|gif)]\([a-z0-9]+\)/gi, '')
         .toLowerCase().trim().replace(/[^a-z0-9]/g, '');
     const comparisons = [
-        /i(?:am|m)?\d{1,2}/,
         /i(?:am|m)?a?minor/,
+        /i(?:am|m)?a?\d{1,2}/,
         /i(?:am|m)?under\d{1,2}/,
         /turn(?:ed|ing)\d{1,2}/,
         /i(?:am|m)?(?:about|around|almost|over|past|inmy|recently|just|nearly)\d{1,2}/,
@@ -80,10 +80,7 @@ function validateStringText(body: string): boolean {
     if (comparisons.some(regex => regex.test(text))) return true;
     for (const regex of comparisons) {
         for (let word in numberWords) {
-            if (RegExp(regex.source.replace('\\d{1,2}', word), regex.flags).test(text)) {
-                return true;
-            }
-            if (RegExp(regex.source.replace('\\d{1,2}', word.replace('y','ies?')), regex.flags).test(text)) {
+            if (RegExp(regex.source.replace('\\d{1,2}', word.replace('y','(?:y|ies?)')), regex.flags).test(text)) {
                 return true;
             }
         }
