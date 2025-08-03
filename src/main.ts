@@ -40,19 +40,20 @@ Devvit.addTrigger({
 
 async function onThingUpdate(body: string, user: UserV2, context: TriggerContext, item: Post | Comment) {
     const isGuilty = validateStringText(body), actions: string[] = (await context.settings.get('action')) ?? [];
-    const subredditName = await context.reddit.getCurrentSubredditName(), username = user.name;
+    const subredditName = await context.reddit.getCurrentSubredditName();
+    const username = user.name;
     if (!subredditName) return;
     if (isGuilty) {
         if (actions.includes('banUser')) {
             context.reddit.banUser({
                 context: item.id, subredditName, username,
-                message: 'you have been banned for stating your age\n\ni may be incorrect because im a bot'
+                message: 'you have been banned for stating your age\n\nnote: i may be incorrect because im a bot'
             });
         }
-        if (actions.includes('remove')) item.remove();
-        if (actions.includes('report')) context.reddit.report(item, {
-            reason: 'this user might state their age',
-        });
+        if (actions.includes('remove')) item.remove(); else
+            if (actions.includes('report')) context.reddit.report(item, {
+                reason: `this user might state their age (${context.appVersion})`,
+            });
     }
 }
 
@@ -63,22 +64,22 @@ function validateStringText(body: string): boolean {
         eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
         sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20,
         twentyone: 21, twentytwo: 22, twentythree: 23, twentyfour: 24,
-        twentyfive: 25,
-    }, text = body.toLocaleLowerCase().trim().replace(/[^a-z0-9]/, '');
+        twentyfive: 25, thirty: 30, forty: 40, fifty: 50, sixty: 60,
+        seventy: 70, eighty: 80, ninety: 90, hundred: 100,
+    }, text = body.replace(/!\[(?:img|gif)]\([a-z0-9]+\)/gi, '')
+        .toLowerCase().trim().replace(/[^a-z0-9]/g, '');
     if (/i(am|m)?\d{1,2}/.test(text)) return true;
     if (/i(am|m)?a?minor/.test(text)) return true;
-    if (/i(am|m)?under/.test(text)) return true;
-    if (/justturned\d{1,2}/.test(text)) return true;
+    if (/i(am|m)?under\d{1,2}/.test(text)) return true;
     if (/turned\d{1,2}/.test(text)) return true;
     // Match word-number expressions
     for (let word in numberWords) {
         if (text.includes(`im${word}`) ||
             text.includes(`iam${word}`) ||
-            text.includes(`justturned${word}`)
-            || text.includes(`turned${word}`)
+            text.includes(`turned${word}`) ||
+            RegExp(`i(am|m)?under${word}`).test(text)
         ) return true;
     }
-
     return false;
 }
 
