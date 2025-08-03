@@ -68,17 +68,25 @@ function validateStringText(body: string): boolean {
         seventy: 70, eighty: 80, ninety: 90, hundred: 100,
     }, text = body.replace(/!\[(?:img|gif)]\([a-z0-9]+\)/gi, '')
         .toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-    if (/i(am|m)?\d{1,2}/.test(text)) return true;
-    if (/i(am|m)?a?minor/.test(text)) return true;
-    if (/i(am|m)?under\d{1,2}/.test(text)) return true;
-    if (/turned\d{1,2}/.test(text)) return true;
-    // Match word-number expressions
-    for (let word in numberWords) {
-        if (text.includes(`im${word}`) ||
-            text.includes(`iam${word}`) ||
-            text.includes(`turned${word}`) ||
-            RegExp(`i(am|m)?under${word}`).test(text)
-        ) return true;
+    const comparisons = [
+        /i(?:am|m)?\d{1,2}/,
+        /i(?:am|m)?a?minor/,
+        /i(?:am|m)?under\d{1,2}/,
+        /turn(?:ed|ing)\d{1,2}/,
+        /i(?:am|m)?(?:about|around|almost|over|past|inmy|recently|just|nearly)\d{1,2}/,
+        /\d{1,2}(?:r?st|nd|rd|th)?b(?:irth)?day/,
+        /i(?:am|m)?celebratingMy\d{1,2}/i, 
+    ];
+    if (comparisons.some(regex => regex.test(text))) return true;
+    for (const regex of comparisons) {
+        for (let word in numberWords) {
+            if (RegExp(regex.source.replace('\\d{1,2}', word), regex.flags).test(text)) {
+                return true;
+            }
+            if (RegExp(regex.source.replace('\\d{1,2}', word.replace('y','ies?')), regex.flags).test(text)) {
+                return true;
+            }
+        }
     }
     return false;
 }
