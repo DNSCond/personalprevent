@@ -1,5 +1,6 @@
 import { UserV2 } from '@devvit/protos/types/devvit/reddit/v2alpha/userv2';
 import { Devvit, Post, TriggerContext, Comment } from '@devvit/public-api';
+import { indent_codeblock, normalize_newlines, quoteMarkdown } from 'anthelpers';
 
 Devvit.configure({ redditAPI: true, });
 
@@ -42,6 +43,29 @@ async function onThingUpdate(body: string, _user: UserV2, context: TriggerContex
     }
 }
 
+// Devvit.addMenuItem({
+//     location: 'comment',
+//     label: 'checkComment',
+//     forUserType: 'moderator',
+//     async onPress(event, context: Devvit.Context) {
+//         const currentUser = await context.reddit.getCurrentUsername();
+//         // if (currentUser === undefined) return context.ui.showToast(`there is no currentUser`);
+
+//         const subredditId = (await context.reddit.getCurrentSubreddit()).id,
+//             subject = `u/${currentUser} made me check a comment`,
+//             comment = await context.reddit.getCommentById(event.targetId);
+//         let bodyMarkdown = `u/${currentUser} made me check [comment](${comment.url})`,
+//             { body } = comment, filtertext = body.replace(/!\[(?:img|gif)]\([a-z0-9]+\)/gi, '')
+//                 .toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+//         bodyMarkdown += `\n\n${quoteMarkdown(indent_codeblock(filtertext))}`;
+//         bodyMarkdown += `\n\n---\n\n${quoteMarkdown(indent_codeblock(body))}`;
+//         await context.reddit.modMail.createModNotification({
+//             subject, bodyMarkdown, subredditId,
+//         });
+//       context.ui.showToast({ text: `Done, check the modmail` });
+//     },
+// });
+
 function validateStringText(body: string): any {
     const numberWords = {
         one: 1, two: 2, three: 3, four: 4, five: 5,
@@ -51,13 +75,15 @@ function validateStringText(body: string): any {
         twentyone: 21, twentytwo: 22, twentythree: 23, twentyfour: 24,
         twentyfive: 25, thirty: 30, forty: 40, fifty: 50, sixty: 60,
         seventy: 70, eighty: 80, ninety: 90, hundred: 100,
-    }, text = body.replace(/!\[(?:img|gif)]\([a-z0-9]+\)/gi, '')
+    }, text = normalize_newlines(body)
+        .replace(/^https:\/\/preview.redd.it\/.+$/gim, '')
+        .replace(/!\[(?:img|gif)]\([a-z0-9]+\)/gi, '')
         .toLowerCase().trim().replace(/[^a-z0-9]/g, '');
     const comparisons = [
         /i(?:am|m)?a?minor/,
         /turn(?:ed|ing)\d{1,2}/,
         /i(?:am|m)?under\d{1,2}/,
-        /i(?:am|m)?(?:a|like)?\d{1,2}/,
+        /i(?:am|m)(?:a|like)?\d{1,2}/,
         /i(?:am|m)?(?:about|around|almost|over|past|inmy|recently|just|nearly)\d{1,2}/,
         /i(?:am|m)?a?(?:teen|teenager|adult|senior)/,
         /\d{1,2}(?:r?st|nd|rd|th)?b(?:irth)?day/,

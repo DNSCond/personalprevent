@@ -6,6 +6,7 @@
   "type": "module",
   "dependencies": {
     "@devvit/public-api": "0.11.19",
+    "anthelpers": "^0.0.3",
     "devvit": "0.11.19"
   },
   "scripts": {
