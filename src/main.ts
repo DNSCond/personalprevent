@@ -1,11 +1,11 @@
 import { UserV2 } from '@devvit/protos/types/devvit/reddit/v2alpha/userv2';
 import { Devvit, Post, TriggerContext, Comment } from '@devvit/public-api';
-import { indent_codeblock, normalize_newlines, quoteMarkdown } from 'anthelpers';
+import { normalize_newlines } from 'anthelpers';
 
 Devvit.configure({ redditAPI: true, });
 
 // Devvit.addSettings([{type: 'select', name: 'action',
-// label: 'what to do with guilty',options:
+// label:'what to do with guilty', options:
 // [ { label: 'ban user', value: 'banUser' },
 // { label: 'remove comment or post', value: 'remove' },
 // { label: 'report (or modmail if remove is chosen)', value: 'report' },
@@ -50,7 +50,6 @@ async function onThingUpdate(body: string, _user: UserV2, context: TriggerContex
 //     async onPress(event, context: Devvit.Context) {
 //         const currentUser = await context.reddit.getCurrentUsername();
 //         // if (currentUser === undefined) return context.ui.showToast(`there is no currentUser`);
-
 //         const subredditId = (await context.reddit.getCurrentSubreddit()).id,
 //             subject = `u/${currentUser} made me check a comment`,
 //             comment = await context.reddit.getCommentById(event.targetId);
@@ -65,6 +64,57 @@ async function onThingUpdate(body: string, _user: UserV2, context: TriggerContex
 //       context.ui.showToast({ text: `Done, check the modmail` });
 //     },
 // });
+
+Devvit.addMenuItem({
+    location: 'subreddit',
+    label: 'check String',
+    forUserType: 'moderator',
+    description: 'Test the Filter',
+    async onPress(_event, context: Devvit.Context) {
+        context.ui.showForm(checkString);
+        // const currentUser = await context.reddit.getCurrentUsername();
+        // if (currentUser === undefined) return context.ui.showToast(`there is no currentUser`);
+
+    },
+});
+
+Devvit.addMenuItem({
+    location: 'comment',
+    label: 'checkComment',
+    forUserType: 'moderator',
+    async onPress(event, context: Devvit.Context) {
+        // const currentUser = await context.reddit.getCurrentUsername();
+        // if (currentUser === undefined) return context.ui.showToast(`there is no currentUser`);
+        const comment = await context.reddit.getCommentById(event.targetId);
+        await testString(comment.body, context);
+    },
+});
+
+const checkString = Devvit.createForm(
+    {
+        fields: [
+            {
+                type: 'paragraph',
+                name: 'testString',
+                label: 'test string',
+                required: true,
+            },
+        ],
+        title: 'Test the Filter',
+        acceptLabel: 'Test',
+    },
+    async function (event, context: Devvit.Context) {
+        await testString(event.values.testString, context);
+    }
+);
+async function testString(body: string, context: Devvit.Context) {
+    const isGuilty = validateStringText(body);
+    if (isGuilty) {
+        context.ui.showToast(`a match is made {{${isGuilty}}}`);
+        context.ui.showToast(`and would be reported (${context.appVersion})`);
+    } else context.ui.showToast(`no match is made (${context.appVersion})`);
+}
+
 
 function validateStringText(body: string): any {
     const numberWords = {
@@ -94,7 +144,8 @@ function validateStringText(body: string): any {
     if (value) return (value.exec(text) ?? [true])[0];
     for (const regex of comparisons) {
         for (let word in numberWords) {
-            const exec = RegExp(regex.source.replace('\\d{1,2}', word.replace('y', '(?:y|ies?)')), regex.flags).exec(text);
+            const exec = RegExp(regex.source.replace('\\d{1,2}',
+                word.replace('y', '(?:y|ies?)')), regex.flags).exec(text);
             if (exec) return exec[0];
         }
     }
