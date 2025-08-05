@@ -108,10 +108,9 @@ const checkString = Devvit.createForm(
     }
 );
 async function testString(body: string, context: Devvit.Context) {
-    const isGuilty = validateStringText(body);
+    const isGuilty = validateStringText(body), appV = context.appVersion;
     if (isGuilty) {
-        context.ui.showToast(`a match is made {{${isGuilty}}}`);
-        context.ui.showToast(`and would be reported (${context.appVersion})`);
+        context.ui.showToast(`a match is made {{${isGuilty}}} and would be reported (${appV})`);
     } else context.ui.showToast(`no match is made (${context.appVersion})`);
 }
 
