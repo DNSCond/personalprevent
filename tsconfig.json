@@ -1,3 +1,8 @@
 {
   //"extends": "@devvit/tsconfig/base.json",
+  "compilerOptions": {
+    "target": "es2023",
+    "moduleResolution": "nodenext",
+    "module": "nodenext"
+  }
 }
