@@ -280,8 +280,6 @@ function validateEnglishStringText(body: string, threshold: bigint): { isViolati
   return { isViolation, inThere, outThere, total: inThere + outThere, ratio };
 }
 
-function remove(string: string, regex: RegExp) {
-  return string.replace(regex, '');
-}
+//function remove(string: string, regex: RegExp) {return string.replace(regex, '');}
 
 export default Devvit;
