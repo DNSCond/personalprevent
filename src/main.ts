@@ -4,11 +4,14 @@ import { Devvit, Post, TriggerContext, Comment } from '@devvit/public-api';
 import { normalize_newlines } from 'anthelpers';
 import { words } from './words_alpha.js';
 
-type theFilters = 'age' | 'english';
+type theFilters = 'age' | 'english' | 'ageAgro';
 const defaultFilters: theFilters[] = ['age'];
 const availableFilters: { label: string, value: theFilters }[] = [
   { label: 'self age statement', value: 'age' },
-  { label: 'english', value: 'english' },];
+  { label: 'english', value: 'english' },
+  { label: 'age argressive', value: 'ageAgro', },
+];//argresstive
+
 Devvit.configure({ redditAPI: true, });
 
 Devvit.addSettings([
@@ -19,8 +22,7 @@ Devvit.addSettings([
     defaultValue: defaultFilters,
     multiSelect: true,
   },
-  // {
-  //   type: 'select', name: 'action',
+  // { type: 'select', name: 'action',
   //   label: 'what to do with guilty',
   //   options: [
   //     { label: 'ban user', value: 'banUser' },
@@ -57,13 +59,17 @@ async function onThingUpdate(body: string, _user: UserV2, context: TriggerContex
   const subredditName = await context.reddit.getCurrentSubredditName();//, username = user.name;
   if (!subredditName) return;
   if (actions.includes('age')) {
-    const isAgeGuilty = validateAgeStringText(body);
-    if (isAgeGuilty) {
+    let ageAgro = 0;
+    if (actions.includes('ageAgro')) {
+      ageAgro = 1;
+    }
+    const isAgeGuilty = validateAgeStringText(body, ageAgro);
+    if (isAgeGuilty.match) {
       //, actions: string[] = (await context.settings.get('action')) ?? [];
       // if (actions.includes('banUser')) {context.reddit.banUser({context: item.id, subredditName, username,
       // message: 'you have been banned for stating your age\n\nnote: i may be incorrect because im a bot'
       // });} if (actions.includes('remove')) item.remove(); else if (actions.includes('report'))
-      await context.reddit.report(item, { reason: `this user might state their age (${context.appVersion}) {{${isAgeGuilty}}}`, });
+      await context.reddit.report(item, { reason: `this user might state their age (${context.appVersion}) {{${isAgeGuilty.match}}} [agressiveness: ${isAgeGuilty.tier}]`, });
     }
   }
   if (actions.includes('english')) {
@@ -113,17 +119,17 @@ const checkString = Devvit.createForm(
   {
     fields: [
       {
-        type: 'paragraph',
-        name: 'testString',
-        label: 'test string',
-        required: true,
-      },
-      {
         type: 'select', name: 'filters',
         label: 'which filters to apply',
         options: availableFilters,
         defaultValue: defaultFilters,
         multiSelect: false,
+      },
+      {
+        type: 'paragraph',
+        name: 'testString',
+        label: 'test string',
+        required: true,
       },
     ],
     title: 'Test the Filter',
@@ -169,9 +175,9 @@ Devvit.addMenuItem({
 });
 
 async function manual_testString(body: string, context: Devvit.Context) {
-  const isGuilty = validateAgeStringText(body), appV = context.appVersion;
-  if (isGuilty) {
-    context.ui.showToast(`a match is made {{${isGuilty}}} and would be reported (${appV})`);
+  const isGuilty = validateAgeStringText(body, Infinity), appV = context.appVersion;
+  if (isGuilty.match) {
+    context.ui.showToast(`a match is made {{${isGuilty.match}}} and would be reported with aggressiveness ${isGuilty.tier} (${appV})`);
   } else context.ui.showToast(`no match is made (${context.appVersion})`);
 }
 
@@ -180,7 +186,7 @@ async function manual_English(body: string, context: Devvit.Context) {
   context.ui.showToast(`out of the ${isEnglishGuilty.total} words, ${isEnglishGuilty.inThere} were found in the dictionary and ${isEnglishGuilty.outThere} were not`);
 }
 
-function validateAgeStringText(body: string): string | boolean {
+function validateAgeStringText(body: string, argressiveness: number = 0): { match: string | boolean, tier: number } {
   const numberWords = {
     one: 1, two: 2, three: 3, four: 4, five: 5,
     six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
@@ -202,18 +208,37 @@ function validateAgeStringText(body: string): string | boolean {
     /i(?:am|m)?a?(?:teen|teenager|adult|senior)/,
     /\d{1,2}(?:r?st|nd|rd|th)?b(?:irth)?day/,
     /i(?:am|m)?celebratingMy\d{1,2}/i,
-  ];
-  const { value } = findFirstTruthy(comparisons, regex => regex.test(text));
-  // if (comparisons.some(regex => regex.test(text))) return true;
-  if (value) return (value.exec(text) ?? [true])[0];
-  for (const regex of comparisons) {
-    for (let word in numberWords) {
-      const exec = RegExp(regex.source.replace('\\d{1,2}',
-        word.replace('y', '(?:y|ies?)')), regex.flags).exec(text);
-      if (exec) return exec[0];
-    }
+    /myAgeIs\d{1,2}/i,
+  ].map(regex => ({ regex, tier: 0 }));
+  if (argressiveness > 0) {
+    comparisons.push(...[
+      /\d{1,2}(?:yo|years?old|yrs)/,
+      //\bteen(?:ager)?\b/,\bsenior\b/,
+      ///\bchild\b/,\bpreteen\b/,
+      //\b(?:elementary|middle|high)school\b/,
+      //\bcollege\s?student\b/,
+      /bteen(?:ager)?/,
+      /senior/, /child/, /preteen/,
+      /(?:elementary|middle|high)school/,
+      /collegeStudent/i,
+      /age\d{1,2}/,
+    ].map(regex => ({ regex, tier: 1 })));
+    //comparisons.push(...[{ regex: , tier: 1 },]);
   }
-  return false;
+
+  const { value } = findFirstTruthy(comparisons, Regexp => Regexp.regex.test(text) && argressiveness >= Regexp.tier);
+  // if (comparisons.some(regex => regex.test(text))) return true;
+  if (value) return { match: (value.regex.exec(text) ?? [true])[0], tier: value.tier };
+  for (const Regexp of comparisons) {
+    const { regex } = Regexp;
+    if (argressiveness >= Regexp.tier)
+      for (let word in numberWords) {
+        const exec = RegExp(regex.source.replace('\\d{1,2}',
+          word.replace('y', '(?:y|ies?)')), regex.flags).exec(text);
+        if (exec) return { match: exec[0], tier: Regexp.tier };
+      }
+  }
+  return { match: false, tier: - 1 };
 }
 
 function findFirstTruthy<T>(array: T[], callback: (mixed: T, index: number) => boolean | any, thisContext?: any): { callbackReturn: any, value: T | null } {
@@ -237,7 +262,10 @@ function findFirstTruthy<T>(array: T[], callback: (mixed: T, index: number) => b
 function validateEnglishStringText(body: string, threshold: bigint): { isViolation: boolean, inThere: number, outThere: number, total: number, ratio: number } {
   let inThere = 0, outThere = 0;
   //for (const element of remove(String(body).toLowerCase(), /[~!@#$%^&*(')\-=_+{}\[\]\/\\":;<>,.`]+/ig).split(/\s+/g)) {
-      for (const element of String(body).toLowerCase().split(/\s+/g)) {
+  const string = String(body).toLowerCase().split(/\s+/g).map(
+    string => string.replace(/^[!@#$%^&*()\[\]'";:,.<>\/\-=+=_`~]/, '').replace(/[!@#$%^&*()\[\]'";:,.<>\/\-=+=_`~]$/, '')
+  );
+  for (const element of string) {
     // words: string[]; an array of all valid words
     if (words.has(element)) {
       ++inThere;
