@@ -21,6 +21,10 @@ It can also check if the content is written in English. the bot reports these it
 
 ## changelog
 
+### 0.1.1: activation
+
+- the english filter is now activatable.
+
 ### 0.1.0: devvit publish --public
 
 - the bot is now in review for being public

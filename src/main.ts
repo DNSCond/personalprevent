@@ -22,6 +22,14 @@ Devvit.addSettings([
     defaultValue: defaultFilters,
     multiSelect: true,
   },
+  {
+    type: 'number', name: 'englishFilterTreshold',
+    label: 'how many percent should be in english',
+    defaultValue: 85,
+    onValidate({ value }) {
+      if (!Number.isSafeInteger(value)) { return String(new RangeError('value must be an integer')); }
+    }
+  },
   // { type: 'select', name: 'action',
   //   label: 'what to do with guilty',
   //   options: [
@@ -73,10 +81,11 @@ async function onThingUpdate(body: string, _user: UserV2, context: TriggerContex
     }
   }
   if (actions.includes('english')) {
-    const isEnglishGuilty = validateEnglishStringText(body, 85n);
+    const englishFilterTreshold = await context.settings.get('englishFilterTreshold') as number;
+    const isEnglishGuilty = validateEnglishStringText(body, BigInt(englishFilterTreshold));
     if (isEnglishGuilty.isViolation) {
       //appears to be mostly non-English or gibberish (less than 85% recognized English words).
-      // await context.reddit.report(item, { reason: `out of the ${isEnglishGuilty.total} words, ${isEnglishGuilty.inThere}`, });
+      await context.reddit.report(item, { reason: `out of the ${isEnglishGuilty.total} words, ${isEnglishGuilty.inThere} were english arcording to my list`, });
     }
   }
 }
@@ -263,7 +272,7 @@ function validateEnglishStringText(body: string, threshold: bigint): { isViolati
   let inThere = 0, outThere = 0;
   //for (const element of remove(String(body).toLowerCase(), /[~!@#$%^&*(')\-=_+{}\[\]\/\\":;<>,.`]+/ig).split(/\s+/g)) {
   const string = String(body).toLowerCase().split(/\s+/g).map(
-    string => string.replace(/^[!@#$%^&*()\[\]'";:,.<>\/\-=+=_`~]/, '').replace(/[!@#$%^&*()\[\]'";:,.<>\/\-=+=_`~]$/, '')
+    string => string.replace(/^[!@#$%^&*()\[\]'";:,.<>\/\-=+=_`~]+/, '').replace(/[!@#$%^&*()\[\]'";:,.<>\/\-=+=_`~]+$/, '')
   );
   for (const element of string) {
     // words: string[]; an array of all valid words
